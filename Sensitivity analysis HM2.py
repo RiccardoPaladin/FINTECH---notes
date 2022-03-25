@@ -32,8 +32,10 @@ def best_worst_company(data):
     return best_worst_company
 
 best_worst_company = best_worst_company(data)
-best_worst_company
+print(best_worst_company.info())
 
 #Subsets of best and worst ten companies
-best_10 = best_worst_company.iloc[0:10,:]
-worst_10 = best_worst_company.iloc[40:,:]
+best_10 = best_worst_company.iloc[0:10,:1]
+worst_10 = best_worst_company.iloc[40:,:1]
+print('The best 10 companies are\n', best_10)
+print('The worst 10 companies are\n', worst_10)
