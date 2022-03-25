@@ -74,7 +74,7 @@ blob.translate(from_lang= 'en' ,to = 'it')
 
 import spacy
 #spacy is useful for word vectorization
-nlp = spacy.load("file")
+nlp = spacy.load("en_core_web_sm")
 token1 = nlp('red')
 token1.vector  #series of number useful only for red, they are associated with red 300X300 vector
 token2 = nlp('yellow')
