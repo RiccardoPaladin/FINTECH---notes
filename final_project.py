@@ -211,4 +211,124 @@ st.markdown(
     """
 )
 
+def sharpe(returns, risk_free=0):
+    adj_returns = returns - risk_free
+    return (np.nanmean(adj_returns)) / np.nanstd(adj_returns, ddof=1)
 
+def downside_risk(returns, risk_free=0):
+    adj_returns = returns - risk_free
+    sqr_downside = np.square(np.clip(adj_returns, np.NINF, 0))
+    return np.sqrt(np.nanmean(sqr_downside))
+
+def sortino(returns, risk_free=0):
+    adj_returns = returns - risk_free
+    drisk = downside_risk(adj_returns)
+
+    if drisk == 0:
+        return np.nan
+
+    return (np.nanmean(adj_returns)) / drisk
+
+def Omega(returns,threshold):
+  dailyThresh = (threshold + 1) ** np.sqrt(1 / 252) - 1
+
+  returns['Excess'] = returns['Portfolio Returns'] - dailyThresh
+
+  ret_PosSum = (returns[returns['Excess'] > 0].sum())['Excess']
+  ret_NegSum = (returns[returns['Excess'] < 0].sum())['Excess']
+
+  omega = ret_PosSum / (-ret_NegSum)
+
+  return omega
+
+def get_kurtosis(returns):
+    rets = returns.to_numpy()
+    kurt = kurtosis(rets, fisher = True)
+
+    return kurt[0]
+
+def get_skew(returns):
+    rets = returns.to_numpy()
+    skewness = skew(rets)
+
+    return skewness[0]
+
+
+Portfolio_selected = Stocks
+p_ret = []
+p_vol = []
+p_weights = []
+num_assets = len(Portfolio_selected.columns)
+num_portfolios = 10000
+cov_matrix = Portfolio_selected.apply(lambda x: np.log(1 + x)).cov()
+
+mean_returns_annual = []
+for (columnName, columnData) in Portfolio_selected.iteritems():
+    means_a = columnData.mean() * 252
+    mean_returns_annual.append(means_a)
+
+for portfolio in range(num_portfolios):
+    weights = np.random.uniform(0.05, 0.15, num_assets)
+    weights = weights / np.sum(weights)
+    p_weights.append(weights)
+    returns = np.dot(weights, mean_returns_annual)
+    p_ret.append(returns)
+    var = cov_matrix.mul(weights, axis=0).mul(weights, axis=1).sum().sum()  # Portfolio Variance
+    sd = np.sqrt(var)  # Daily standard deviation
+    ann_sd = sd * np.sqrt(252)  # Annual standard deviation = volatility
+    p_vol.append(ann_sd)
+
+data = {'Returns': p_ret, 'Volatility': p_vol}
+
+for counter, symbol in enumerate(Portfolio_selected.columns.tolist()):
+    # print(counter, symbol)
+    data[symbol] = [w[counter] for w in p_weights]
+
+portfolios_generated = pd.DataFrame(data)
+portfolios_generated.head()
+
+min_vol_port = portfolios_generated.iloc[portfolios_generated['Volatility'].idxmin()]
+min_vol_port = st.dataframe(min_vol_port)
+
+st.text('Weights for the minimum variance portfolio ')
+
+st.markdown(
+    f"""
+    {min_vol_port}
+    """
+)
+
+
+optimal_risky_port = portfolios_generated.iloc[((portfolios_generated['Returns'])/
+                                                portfolios_generated['Volatility']).idxmax()]
+
+optimal_risky_port = st.dataframe(optimal_risky_port)
+st.text('Weights for the maximum Sharpe Ratio  portfolio ')
+
+st.markdown(
+    f"""
+    {optimal_risky_port}
+    """
+)
+
+
+st.text('Predictions ')
+
+
+prediction = []
+MSE = []
+for i in range(24):
+    model = LinearRegression()
+    model.fit(Stocks.iloc[0:len(Stocks)-20, [-i]], Stocks.iloc[0:len(Stocks)-20, i])
+    pred = model.predict(Stocks.iloc[len(Stocks)-20:, [-i]])
+    prediction.append(pred)
+    mse = np.sqrt(mean_squared_error(Stocks.iloc[len(Stocks)-20:, i], pred))
+    MSE.append(mse)
+
+prediction = np.asarray(prediction)
+prediction = prediction.tolist()
+df = pd.DataFrame(prediction).T
+df.columns = list(Stocks.columns)
+Stocks1 = Stocks.append(df, ignore_index=True)
+print('Mean of all MSE:', Average(MSE))
+Stocks1
