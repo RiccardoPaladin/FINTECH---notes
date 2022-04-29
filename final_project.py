@@ -8,6 +8,7 @@ from datetime import date
 import yfinance as yf
 import seaborn as sn
 from sklearn.linear_model import LinearRegression
+from scipy.stats import kurtosis, skew
 
 st.set_page_config(
     page_title="Stock fundamental analysis")
