@@ -103,4 +103,46 @@ st.markdown(
     """
 )
 
+# Performance Metric Functions
 
+def sharpe(returns, risk_free=0):
+    adj_returns = returns - risk_free
+    return (np.nanmean(adj_returns)) / np.nanstd(adj_returns, ddof=1)
+
+def downside_risk(returns, risk_free=0):
+    adj_returns = returns - risk_free
+    sqr_downside = np.square(np.clip(adj_returns, np.NINF, 0))
+    return np.sqrt(np.nanmean(sqr_downside))
+
+def sortino(returns, risk_free=0):
+    adj_returns = returns - risk_free
+    drisk = downside_risk(adj_returns)
+
+    if drisk == 0:
+        return np.nan
+
+    return (np.nanmean(adj_returns)) / drisk
+
+def Omega(returns,threshold):
+  dailyThresh = (threshold + 1) ** np.sqrt(1 / 252) - 1
+
+  returns['Excess'] = returns['Portfolio Returns'] - dailyThresh
+
+  ret_PosSum = (returns[returns['Excess'] > 0].sum())['Excess']
+  ret_NegSum = (returns[returns['Excess'] < 0].sum())['Excess']
+
+  omega = ret_PosSum / (-ret_NegSum)
+
+  return omega
+
+def get_kurtosis(returns):
+    rets = returns.to_numpy()
+    kurt = kurtosis(rets, fisher = True)
+
+    return kurt[0]
+
+def get_skew(returns):
+    rets = returns.to_numpy()
+    skewness = skew(rets)
+
+    return skewness[0]
