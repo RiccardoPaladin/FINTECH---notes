@@ -54,6 +54,68 @@ def get_skew(returns):
 
     return skewness[0]
 
+
+Portfolio_selected = Stocks
+p_ret = []
+p_vol = []
+p_weights = []
+num_assets = len(Portfolio_selected.columns)
+num_portfolios = 10000
+cov_matrix = Portfolio_selected.apply(lambda x: np.log(1 + x)).cov()
+
+mean_returns_annual = []
+for (columnName, columnData) in Portfolio_selected.iteritems():
+    means_a = columnData.mean() * 252
+    mean_returns_annual.append(means_a)
+
+for portfolio in range(num_portfolios):
+    weights = np.random.uniform(0.05, 0.15, num_assets)
+    weights = weights / np.sum(weights)
+    p_weights.append(weights)
+    returns = np.dot(weights, mean_returns_annual)
+    p_ret.append(returns)
+    var = cov_matrix.mul(weights, axis=0).mul(weights, axis=1).sum().sum()  # Portfolio Variance
+    sd = np.sqrt(var)  # Daily standard deviation
+    ann_sd = sd * np.sqrt(252)  # Annual standard deviation = volatility
+    p_vol.append(ann_sd)
+
+data = {'Returns': p_ret, 'Volatility': p_vol}
+
+for counter, symbol in enumerate(Portfolio_selected.columns.tolist()):
+    # print(counter, symbol)
+    data[symbol] = [w[counter] for w in p_weights]
+
+portfolios_generated = pd.DataFrame(data)
+portfolios_generated.head()
+
+min_vol_port = portfolios_generated.iloc[portfolios_generated['Volatility'].idxmin()]
+min_vol_port = st.dataframe(min_vol_port)
+
+st.text('Weights for the minimum variance portfolio ')
+
+st.markdown(
+    f"""
+    {min_vol_port}
+    """
+)
+
+
+optimal_risky_port = portfolios_generated.iloc[((portfolios_generated['Returns'])/
+                                                portfolios_generated['Volatility']).idxmax()]
+
+optimal_risky_port = st.dataframe(optimal_risky_port)
+st.text('Weights for the maximum Sharpe Ratio  portfolio ')
+
+st.markdown(
+    f"""
+    {optimal_risky_port}
+    """
+)
+
+
+st.text('Predictions ')
+
+
 st.set_page_config(
     page_title="Stock fundamental analysis")
 
@@ -62,12 +124,13 @@ st.text('In this web app you can insert stock tickers and obtain several results
 
 st.text('Insert a series of tickers with comma')
 
-tickers_input = st.text_input('Enter here the tickers','')
+tickers_input = st.text_input('Enter here the tickers and in the first position the benchmark','').split()
+
 start_date = st.text_input('Enter here the start date','')
 end_date = st.text_input('Enter here the end date','')
-start_date = '01-01-2020'
-end_date = '03-28-2022'
-#tickers_input = ['SPY', 'AAPL', 'TSLA']
+#start_date = '01-01-2020'
+#end_date = '03-28-2022'
+#tickers_input = [tickers_input1, tickers_input2]
 Data = data.DataReader(tickers_input, 'yahoo', start_date, end_date)
 Stocks_prices = Data['Adj Close']
 all_weekdays = pd.date_range(start=start_date, end=end_date, freq='B')
@@ -81,7 +144,7 @@ st.markdown(
     """
 )
 
-price_chart = st.line_chart(pd.DataFrame(Stocks_prices.iloc[0:,1]))
+price_chart = plt.plot(Stocks_prices)
 
 st.markdown(
     f"""
@@ -111,7 +174,7 @@ for (columnName, columnData) in Stocks.iteritems():
     )
 
 reg_data = []
-for i in range(3):
+for i in range(len(Stocks.columns)):
     model = LinearRegression()
     X = Stocks.iloc[0:, 0].to_numpy().reshape(-1, 1)
     Y = Stocks.iloc[0:, i].to_numpy().reshape(-1, 1)
