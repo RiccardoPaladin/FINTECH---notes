@@ -17,12 +17,12 @@ st.text('In this web app you can insert stock tickers and obtain several results
 
 st.text('Insert a series of tickers with comma')
 
-#tickers_input =list(st.text_input('Enter here the tickers',''))
-#start_date = st.text_input('Enter here the start date','')
-#end_date = st.text_input('Enter here the end date','')
+tickers_input = st.text_input('Enter here the tickers','')
+start_date = st.text_input('Enter here the start date','')
+end_date = st.text_input('Enter here the end date','')
 start_date = '01-01-2020'
 end_date = '03-28-2022'
-tickers_input = ['SPY', 'AAPL', 'TSLA']
+#tickers_input = ['SPY', 'AAPL', 'TSLA']
 Data = data.DataReader(tickers_input, 'yahoo', start_date, end_date)
 Stocks_prices = Data['Adj Close']
 all_weekdays = pd.date_range(start=start_date, end=end_date, freq='B')
@@ -36,7 +36,7 @@ st.markdown(
     """
 )
 
-price_chart = st.line_chart(pd.DataFrame(Stocks_prices['SPY']))
+price_chart = st.line_chart(pd.DataFrame(Stocks_prices.iloc[0:,1]))
 
 st.markdown(
     f"""
