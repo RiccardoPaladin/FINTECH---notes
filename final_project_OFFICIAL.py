@@ -203,7 +203,7 @@ st.text('Predictions ')
 
 prediction = []
 MSE = []
-for i in range(24):
+for i in range(len(Stocks.columns)):
     model = LinearRegression()
     model.fit(Stocks.iloc[0:len(Stocks)-20, [-i]], Stocks.iloc[0:len(Stocks)-20, i])
     pred = model.predict(Stocks.iloc[len(Stocks)-20:, [-i]])
