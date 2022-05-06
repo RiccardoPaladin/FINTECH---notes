@@ -44,7 +44,7 @@ st.markdown(
     {Stocks_price}
     """
 )
-
+st.markdown('##  Fundamental analysis')
 Stocks = Stocks_prices.pct_change()
 Stocks = Stocks.dropna()
 
@@ -140,7 +140,7 @@ st.markdown(
 )
 
 
-st.text('Portfolio optimization ')
+st.markdown('## Portfolio optimization ')
 
 Portfolio_selected = Stocks
 p_ret = []
@@ -177,7 +177,7 @@ portfolios_generated = pd.DataFrame(data)
 min_vol_port = portfolios_generated.iloc[portfolios_generated['Volatility'].idxmin()]
 
 min_vol_port = st.dataframe(min_vol_port)
-st.text('Weights for the minimum variance portfolio ')
+st.markdown('Weights for the minimum variance portfolio ')
 
 st.markdown(
     f"""
@@ -190,7 +190,7 @@ optimal_risky_port = portfolios_generated.iloc[((portfolios_generated['Returns']
                                                 portfolios_generated['Volatility']).idxmax()]
 
 optimal_risky_port = st.dataframe(optimal_risky_port)
-st.text('Weights for the maximum Sharpe Ratio  portfolio ')
+st.markdown('Weights for the maximum Sharpe Ratio  portfolio ')
 
 st.markdown(
     f"""
@@ -199,7 +199,7 @@ st.markdown(
 )
 
 
-st.text('Predictions ')
+st.markdown('## Predictions next 20 days ')
 
 prediction = []
 MSE = []
@@ -223,7 +223,7 @@ st.markdown(
     """
 )
 
-st.text('Mean Squared Error of the Predictions ')
+st.markdown('Mean Squared Error of the Predictions ')
 MSE_mean = sum(MSE)/len(MSE)
 st.markdown(
     f"""
