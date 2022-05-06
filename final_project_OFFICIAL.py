@@ -9,22 +9,29 @@ import yfinance as yf
 import seaborn as sn
 from sklearn.linear_model import LinearRegression
 from scipy.stats import kurtosis, skew
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+import chart
+import altair as alt
+
 
 st.set_page_config(
     page_title="Stock fundamental analysis")
 
-st.title('Stock fundamental analysis')
-st.text('In this web app you can insert stock tickers and obtain several results...')
+st.title('📈 Stock Fundamental Analysis')
+st.markdown('## **Authors: Riccardo Paladin, Gabriella Saade, Nhat Pham**')
+st.markdown('In this web app you can insert stock tickers and obtain a complete fundamental analysis and portfolio optimization.'
+            'It is based on machine learning algorithms implemented in python.')
 
-st.text('Insert a series of tickers with comma')
+st.markdown('📊 Insert a series of tickers and start the analysis')
 
-tickers_input = st.text_input('Enter here the tickers and in the first position the benchmark','').split()
+tickers_input = st.text_input(' 📍 Enter here the tickers and in the first position the benchmark (no commas)','').split()
 
-start_date = st.text_input('Enter here the start date','')
-end_date = st.text_input('Enter here the end date','')
-#start_date = '01-01-2020'
-#end_date = '03-28-2022'
-#tickers_input = [tickers_input1, tickers_input2]
+start_date = st.text_input('🗓 Enter here the start date (mm-dd-yyyy)','')
+end_date = st.text_input('🗓 Enter here the end date (mm-dd-yyyy)','')
+
+
 Data = data.DataReader(tickers_input, 'yahoo', start_date, end_date)
 Stocks_prices = Data['Adj Close']
 all_weekdays = pd.date_range(start=start_date, end=end_date, freq='B')
@@ -76,11 +83,6 @@ fundamentals = fundamentals.join(reg_data)
 fundamentals = fundamentals.sort_values(by='Sharpe', ascending=False)
 
 
-
-def sharpe(returns, risk_free=0):
-    adj_returns = returns - risk_free
-    return (np.nanmean(adj_returns)) / np.nanstd(adj_returns, ddof=1)
-
 def downside_risk(returns, risk_free=0):
     adj_returns = returns - risk_free
     sqr_downside = np.square(np.clip(adj_returns, np.NINF, 0))
@@ -120,13 +122,6 @@ def get_skew(returns):
     return skewness[0]
 
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots()
-sns.heatmap(Stocks.corr(), ax=ax)
-corr = st.write(fig)
-
 fundamental = st.dataframe(fundamentals)
 st.markdown(
     f"""
@@ -134,12 +129,18 @@ st.markdown(
     """
 )
 
+fig, ax = plt.subplots()
+sns.heatmap(Stocks.corr(), ax=ax)
+corr = st.write(fig)
 
 st.markdown(
     f"""
     {corr}
     """
 )
+
+
+st.text('Portfolio optimization ')
 
 Portfolio_selected = Stocks
 p_ret = []
@@ -172,11 +173,10 @@ for counter, symbol in enumerate(Portfolio_selected.columns.tolist()):
     data[symbol] = [w[counter] for w in p_weights]
 
 portfolios_generated = pd.DataFrame(data)
-portfolios_generated.head()
 
 min_vol_port = portfolios_generated.iloc[portfolios_generated['Volatility'].idxmin()]
-min_vol_port = st.dataframe(min_vol_port)
 
+min_vol_port = st.dataframe(min_vol_port)
 st.text('Weights for the minimum variance portfolio ')
 
 st.markdown(
@@ -216,6 +216,19 @@ prediction = prediction.tolist()
 df = pd.DataFrame(prediction).T
 df.columns = list(Stocks.columns)
 Stocks1 = Stocks.append(df, ignore_index=True)
-print('Mean of all MSE:', Average(MSE))
-Stocks1
+Stocks_pred = st.dataframe(Stocks1)
+st.markdown(
+    f"""
+    {Stocks_pred}
+    """
+)
+
+st.text('Mean Squared Error of the Predictions ')
+MSE_mean = sum(MSE)/len(MSE)
+st.markdown(
+    f"""
+    {MSE_mean}
+    """
+)
+
 
