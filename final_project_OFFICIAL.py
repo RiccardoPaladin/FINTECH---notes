@@ -44,6 +44,8 @@ st.markdown(
     {Stocks_price}
     """
 )
+
+
 st.markdown('##  Fundamental analysis')
 Stocks = Stocks_prices.pct_change()
 Stocks = Stocks.dropna()
