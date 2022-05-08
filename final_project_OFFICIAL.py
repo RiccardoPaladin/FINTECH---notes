@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 import chart
 import altair as alt
-
+st.set_option('deprecation.showPyplotGlobalUse', False)
 
 st.set_page_config(
     page_title="Stock fundamental analysis")
@@ -45,10 +45,14 @@ st.markdown(
     """
 )
 
-
-st.markdown('##  Fundamental analysis')
 Stocks = Stocks_prices.pct_change()
 Stocks = Stocks.dropna()
+Stocks_prices.plot()
+plt.show()
+st.pyplot()
+
+
+st.markdown('##  Fundamental analysis')
 
 fundamentals = []
 mean_ret = []
