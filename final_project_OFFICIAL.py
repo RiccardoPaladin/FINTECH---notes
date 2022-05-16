@@ -1,4 +1,4 @@
-#pip install streamlit
+# pip install streamlit
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -14,6 +14,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 import chart
 import altair as alt
+import pypfopt
+
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
 st.set_page_config(
@@ -21,16 +23,17 @@ st.set_page_config(
 
 st.title('📈 Stock Fundamental Analysis')
 st.markdown('## **Authors: Riccardo Paladin, Gabriella Saade, Nhat Pham**')
-st.markdown('In this web app you can insert stock tickers and obtain a complete fundamental analysis and portfolio optimization.'
-            'It is based on machine learning algorithms implemented in python.')
+st.markdown(
+    'In this web app you can insert stock tickers and obtain a complete fundamental analysis and portfolio optimization.'
+    'It is based on machine learning algorithms implemented in python.')
 
 st.markdown('📊 Insert a series of tickers and start the analysis')
 
-tickers_input = st.text_input(' 📍 Enter here the tickers and in the first position the benchmark (no commas)','').split()
+tickers_input = st.text_input(' 📍 Enter here the tickers and in the first position the benchmark (no commas)',
+                              '').split()
 
-start_date = st.text_input('🗓 Enter here the start date (mm-dd-yyyy)','')
-end_date = st.text_input('🗓 Enter here the end date (mm-dd-yyyy)','')
-
+start_date = st.text_input('🗓 Enter here the start date (mm-dd-yyyy)', '')
+end_date = st.text_input('🗓 Enter here the end date (mm-dd-yyyy)', '')
 
 Data = data.DataReader(tickers_input, 'yahoo', start_date, end_date)
 Stocks_prices = Data['Adj Close']
@@ -50,7 +53,6 @@ Stocks = Stocks.dropna()
 Stocks_prices.plot()
 plt.show()
 st.pyplot()
-
 
 st.markdown('##  Fundamental analysis')
 
@@ -89,13 +91,14 @@ fundamentals = fundamentals.join(reg_data)
 fundamentals = fundamentals.sort_values(by='Sharpe', ascending=False)
 
 
-def downside_risk(returns, risk_free=0):
-    adj_returns = returns - risk_free
+def downside_risk(rets, risk_free=0):
+    adj_returns = rets - risk_free
     sqr_downside = np.square(np.clip(adj_returns, np.NINF, 0))
     return np.sqrt(np.nanmean(sqr_downside))
 
-def sortino(returns, risk_free=0):
-    adj_returns = returns - risk_free
+
+def sortino(rets, risk_free=0):
+    adj_returns = rets - risk_free
     drisk = downside_risk(adj_returns)
 
     if drisk == 0:
@@ -103,29 +106,32 @@ def sortino(returns, risk_free=0):
 
     return (np.nanmean(adj_returns)) / drisk
 
-def Omega(returns,threshold):
-  dailyThresh = (threshold + 1) ** np.sqrt(1 / 252) - 1
 
-  returns['Excess'] = returns['Portfolio Returns'] - dailyThresh
-
-  ret_PosSum = (returns[returns['Excess'] > 0].sum())['Excess']
-  ret_NegSum = (returns[returns['Excess'] < 0].sum())['Excess']
-
-  omega = ret_PosSum / (-ret_NegSum)
-
-  return omega
-
-def get_kurtosis(returns):
-    rets = returns.to_numpy()
-    kurt = kurtosis(rets, fisher = True)
+def get_kurtosis(rets):
+    rets1 = rets.to_numpy()
+    kurt = kurtosis(rets1, fisher=True)
 
     return kurt[0]
 
-def get_skew(returns):
-    rets = returns.to_numpy()
-    skewness = skew(rets)
+
+def get_skew(rets):
+    rets1 = rets.to_numpy()
+    skewness = skew(rets1)
 
     return skewness[0]
+
+
+def get_maximum_drawdown(daily_return_series):
+    cum_ret = (daily_return_series + 1).cumprod()
+    running_max = np.maximum.accumulate(cum_ret)
+
+    # Ensure the value never drops below 1
+    running_max[running_max < 1] = 1
+
+    # Calculate the percentage drawdown
+    drawdown = (cum_ret) / running_max - 1
+
+    return drawdown.min()
 
 
 fundamental = st.dataframe(fundamentals)
@@ -144,7 +150,6 @@ st.markdown(
     {corr}
     """
 )
-
 
 st.markdown('## Portfolio optimization ')
 
@@ -191,8 +196,7 @@ st.markdown(
     """
 )
 
-
-optimal_risky_port = portfolios_generated.iloc[((portfolios_generated['Returns'])/
+optimal_risky_port = portfolios_generated.iloc[((portfolios_generated['Returns']) /
                                                 portfolios_generated['Volatility']).idxmax()]
 
 optimal_risky_port = st.dataframe(optimal_risky_port)
@@ -204,6 +208,48 @@ st.markdown(
     """
 )
 
+st.markdown('## Performance for Optimal Portfolio')
+
+Ret = Stocks_prices.pct_change().dropna()
+opt_rets = Ret.mean() * 252
+opt_cov = Ret.cov() * 252
+op = pypfopt.EfficientFrontier(opt_rets, opt_cov, weight_bounds=(0, 1))
+w = op.min_volatility()
+w1 = op.clean_weights()
+opt_w = pd.DataFrame(w1, columns=w1.keys(), index=[0])
+opt_w = opt_w.transpose()
+port_rets = Ret.dot(opt_w)
+
+port_rets.columns = ['Portfolio Returns']
+cumrets = np.cumsum(port_rets)  # Cumulative returns
+annuals = port_rets.resample('1Y').sum()  # Annulized
+
+sortino_ratio = sortino(annuals, risk_free=0)
+kurtosis1 = get_kurtosis(annuals)
+skewness1 = get_skew(annuals)
+mdd = get_maximum_drawdown(port_rets)
+avg_arets = port_rets.mean() * 252
+avg_avol = port_rets.std() * 252
+
+performance = pd.DataFrame(np.zeros((6, 1)))
+performance.columns = ['Optimal Portfolio']
+
+performance.iloc[0, 0] = avg_arets
+performance.iloc[1, 0] = avg_avol
+performance.iloc[2, 0] = sortino_ratio
+performance.iloc[3, 0] = mdd
+performance.iloc[4, 0] = kurtosis1
+performance.iloc[5, 0] = skewness1
+
+performance.index = ['Average Returns', 'Average Volatility', 'Sortino Ratio', 'Max. Drawdown', 'Kurtosis', 'Skewness']
+
+performance = st.dataframe(performance)
+
+st.markdown(
+    f"""
+    {performance}
+    """
+)
 
 st.markdown('## Predictions next 20 days ')
 
@@ -211,10 +257,10 @@ prediction = []
 MSE = []
 for i in range(len(Stocks.columns)):
     model = LinearRegression()
-    model.fit(Stocks.iloc[0:len(Stocks)-20, [-i]], Stocks.iloc[0:len(Stocks)-20, i])
-    pred = model.predict(Stocks.iloc[len(Stocks)-20:, [-i]])
+    model.fit(Stocks.iloc[0:len(Stocks) - 20, [-i]], Stocks.iloc[0:len(Stocks) - 20, i])
+    pred = model.predict(Stocks.iloc[len(Stocks) - 20:, [-i]])
     prediction.append(pred)
-    mse = np.sqrt(mean_squared_error(Stocks.iloc[len(Stocks)-20:, i], pred))
+    mse = np.sqrt(mean_squared_error(Stocks.iloc[len(Stocks) - 20:, i], pred))
     MSE.append(mse)
 
 prediction = np.asarray(prediction)
@@ -230,11 +276,9 @@ st.markdown(
 )
 
 st.markdown('Mean Squared Error of the Predictions ')
-MSE_mean = sum(MSE)/len(MSE)
+MSE_mean = sum(MSE) / len(MSE)
 st.markdown(
     f"""
     {MSE_mean}
     """
 )
-
-
